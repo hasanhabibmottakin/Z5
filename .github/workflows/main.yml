@@ -1,4 +1,4 @@
-name: 🔄 Auto Update Zee5 Token
+name:  Auto Update Zee5 DATA
 
 permissions:
   contents: write
@@ -23,10 +23,10 @@ jobs:
         env:
           TOKEN_SOURCE_URL: ${{ secrets.ZEE5_TOKEN_API }}
         run: |
-          echo "🔍 Fetching M3U..."
+          echo " Fetching M3U..."
           M3U_CONTENT=$(curl -s "$TOKEN_SOURCE_URL")
 
-          echo "🔍 Extracting token (Aaj Tak / AAJTAK)..."
+          echo " Extracting token (Aaj Tak / AAJTAK)..."
           URL_LINE=$(echo "$M3U_CONTENT" | grep -iA2 "Aaj Tak" | grep -Eo "https?://[^ ]+")
           if [ -z "$URL_LINE" ]; then
             URL_LINE=$(echo "$M3U_CONTENT" | grep -i "AAJTAK" | grep -Eo "https?://[^ ]+")
@@ -35,12 +35,12 @@ jobs:
           TOKEN=$(echo "$URL_LINE" | grep -o "hdntl=[^ ]*")
 
           if [ -z "$TOKEN" ]; then
-            echo "❌ Token not found!"
+            echo "Token not found!"
             echo "Debug URL: $URL_LINE"
-            exit 1
+            exit 
           fi
 
-          echo "✅ Token found: ${TOKEN:0:60}..."
+          echo "Token found: ${TOKEN:0:60}..."
           jq --arg token "$TOKEN" '.data |= map(.url |= (. | split("?")[0] + "?" + $token))' api.json > rest_api.json
 
       - name: Commit and Push changes
@@ -50,5 +50,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add rest_api.json
-          git commit -m "🔄 Auto update Zee5 token" || echo "No changes to commit"
+          git commit -m "Auto update Zee5 token" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
