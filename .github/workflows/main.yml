@@ -1,0 +1,47 @@
+name:  Auto Update Zee5 data
+
+on:
+  schedule:
+    - cron: "*/50 * * * *"   
+  workflow_dispatch:          
+
+jobs:
+  update-token:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq & curl
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
+      - name: Extract Token from M3U and Update JSON
+        env:
+          TOKEN_SOURCE_URL: ${{ secrets.ZEE5_TOKEN_API }}
+        run: |
+          echo " Fetching M3U..."
+          M3U_CONTENT=$(curl -s "$TOKEN_SOURCE_URL")
+          
+          echo " Extracting token from Aaj Tak stream..."
+          TOKEN=$(echo "$M3U_CONTENT" | grep -A1 "Aaj Tak" | grep "https" | sed -n 's/.*\(hdntl=.*\)/\1/p')
+          
+          if [ -z "$TOKEN" ]; then
+            echo "Token not found!"
+            exit 1
+          fi
+          
+          echo " Token found: ${TOKEN:0:60}..."
+          
+          echo " Updating api.json..."
+          jq --arg token "$TOKEN" '.data |= map(.url |= (. | split("?")[0] + "?" + $token))' api.json > rest_api.json
+          
+          echo "Saved updated file: rest_api.json"
+      
+      - name: Commit and Push changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add rest_api.json
+          git commit -m " Auto update Zee5 token"
+          git push
