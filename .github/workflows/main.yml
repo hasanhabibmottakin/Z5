@@ -1,4 +1,4 @@
-name:  Auto Update Zee5 DATA
+name: Auto Update Zee5 DATA
 
 permissions:
   contents: write
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  update-token:
+  update-zee5:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,7 +19,7 @@ jobs:
       - name: Install jq & curl
         run: sudo apt-get update && sudo apt-get install -y jq curl
 
-      - name: Extract Token from M3U and Update JSON
+      - name: Extract Token and Update JSON
         env:
           TOKEN_SOURCE_URL: ${{ secrets.ZEE5_TOKEN_API }}
         run: |
@@ -33,15 +33,33 @@ jobs:
           fi
 
           TOKEN=$(echo "$URL_LINE" | grep -o "hdntl=[^ ]*")
-
           if [ -z "$TOKEN" ]; then
             echo "Token not found!"
             echo "Debug URL: $URL_LINE"
-            exit 
+            exit 1
           fi
 
           echo "Token found: ${TOKEN:0:60}..."
+
+          echo "Updating api.json → rest_api.json"
           jq --arg token "$TOKEN" '.data |= map(.url |= (. | split("?")[0] + "?" + $token))' api.json > rest_api.json
+
+          echo " Creating data.json with required structure..."
+          jq '{
+            group: "Zee5",
+            logo: .logo,
+            mobile: "on",
+            name: .name,
+            premium: (if .premium then true else false end),
+            source: {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 ygx/69.1 Safari/537.36"
+              },
+              url: .url
+            },
+            status: "on",
+            tv: "off"
+          }' rest_api.json | jq -s '.' > data.json
 
       - name: Commit and Push changes
         env:
@@ -49,6 +67,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add rest_api.json
-          git commit -m "Auto update Zee5 token" || echo "No changes to commit"
+          git add rest_api.json data.json
+          git commit -m "🔁 Auto update Zee5 token and data.json" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
