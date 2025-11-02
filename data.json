@@ -1,0 +1,17 @@
+[
+  {
+    "group": "Zee5",
+    "logo": null,
+    "mobile": "on",
+    "name": null,
+    "premium": false,
+    "source": {
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 ygx/69.1 Safari/537.36"
+      },
+      "url": null
+    },
+    "status": "on",
+    "tv": "off"
+  }
+]
